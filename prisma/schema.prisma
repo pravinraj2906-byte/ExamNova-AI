@@ -1,0 +1,206 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  passwordHash      String
+  name              String?
+  avatarUrl         String?
+  gradeLevel        String?
+  learningStyle     String?
+  preferredSubjects String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  chatSessions      ChatSession[]
+  chatMessages      ChatMessage[]
+  studyPlans        StudyPlan[]
+  quizzes           Quiz[]
+  documents         Document[]
+  progressTracking  ProgressTracking[]
+  achievements      Achievement[]
+
+  @@index([email])
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  topic     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // "user" or "assistant"
+  content   String
+  imageUrl  String?
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([userId])
+}
+
+model StudyPlan {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  subject         String?
+  difficultyLevel String?
+  durationDays    Int?
+  topics          String?
+  goals           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+
+  days StudyPlanDay[]
+
+  @@index([userId])
+}
+
+model StudyPlanDay {
+  id        String   @id @default(cuid())
+  planId    String
+  plan      StudyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  dayNumber Int
+  topic     String?
+  content   String?
+  exercises String?
+  completed Boolean  @default(false)
+  completedAt DateTime?
+
+  @@index([planId])
+}
+
+model Quiz {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String
+  subject           String?
+  difficultyLevel   String?
+  totalQuestions    Int?
+  timeLimitMinutes  Int?
+  createdAt         DateTime @default(now())
+  startedAt         DateTime?
+  completedAt       DateTime?
+
+  questions QuizQuestion[]
+  answers   QuizAnswer[]
+
+  @@index([userId])
+}
+
+model QuizQuestion {
+  id              String   @id @default(cuid())
+  quizId          String
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  questionNumber  Int
+  questionText    String
+  imageUrl        String?
+  questionType    String   // "multiple_choice", "short_answer", "essay"
+  options         String?
+  correctAnswer   String?
+  explanation     String?
+
+  answers QuizAnswer[]
+
+  @@index([quizId])
+}
+
+model QuizAnswer {
+  id              String   @id @default(cuid())
+  quizId          String
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  questionId      String
+  question        QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  userAnswer      String
+  isCorrect       Boolean?
+  timeSpentSeconds Int?
+  createdAt       DateTime @default(now())
+
+  @@index([quizId])
+  @@index([questionId])
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  fileType  String?
+  fileUrl   String
+  uploadedAt DateTime @default(now())
+  processed Boolean  @default(false)
+  content   String?
+
+  analysis DocumentAnalysis[]
+
+  @@index([userId])
+}
+
+model DocumentAnalysis {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  problemText String?
+  problemType String?
+  solution    String?
+  steps       String?
+  explanation String?
+  createdAt   DateTime @default(now())
+
+  @@index([documentId])
+}
+
+model ProgressTracking {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject            String?
+  totalProblemsSolved Int @default(0)
+  correctAnswers     Int @default(0)
+  accuracyPercentage Float?
+  totalStudyHours    Float  @default(0)
+  lastStudiedAt      DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Achievement {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  description String?
+  badgeType String?
+  earnedAt  DateTime @default(now())
+
+  @@index([userId])
+}
